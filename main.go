@@ -131,6 +131,7 @@ func webhookHandler(c *gin.Context) {
 				update.ChatMember.NewChatMember.User.FirstName, update.ChatMember.NewChatMember.User.LastName,
 				update.ChatMember.NewChatMember.User.UserName, fmt.Sprintf("%d", update.ChatMember.Chat.ID))
 			msg.ParseMode = "Markdown"
+
 			msg.DisableWebPagePreview = true
 
 			_, err = bot.Send(msg)
@@ -175,7 +176,7 @@ func testResultHandler(c *gin.Context) {
 	}
 	if !req.Pass {
 		// 把用户移出群组
-		until := time.Now().Add(time.Minute * 5).Unix()
+		until := time.Now().Add(time.Minute * 10).Unix()
 		actions.BanUser(bot, CurrentlyChatID, req.UserID, until)
 	} else {
 		// 把用户解除禁言

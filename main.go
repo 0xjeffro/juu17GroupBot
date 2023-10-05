@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 var bot *tgbotapi.BotAPI
@@ -26,7 +27,6 @@ var chatIDWhiteList = []int64{ // 白名单
 	-1001924194112, // 正式群
 	-1001832030593, // 测试群4
 	-1001611670994, // 测试群2
-
 }
 var CurrentlyChatID int64 = chatIDWhiteList[0]
 
@@ -175,9 +175,8 @@ func testResultHandler(c *gin.Context) {
 	}
 	if !req.Pass {
 		// 把用户移出群组
-		actions.BanUser(bot, CurrentlyChatID, req.UserID, 0)
-		actions.UnbanUser(bot, CurrentlyChatID, req.UserID)
-
+		until := time.Now().Add(time.Minute * 5).Unix()
+		actions.BanUser(bot, CurrentlyChatID, req.UserID, until)
 	} else {
 		// 把用户解除禁言
 		actions.UnrestrictUser(bot, CurrentlyChatID, req.UserID)

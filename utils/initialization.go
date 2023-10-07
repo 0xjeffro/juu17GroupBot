@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"log"
+	"os"
 )
 
 func InitBot(token string, webhook string, debug bool) *tgbotapi.BotAPI {
@@ -59,4 +60,21 @@ func InitLogger() {
 	cfg.EncoderConfig = encoderConfig
 	logger, _ := cfg.Build()
 	zap.ReplaceGlobals(logger)
+}
+
+// CheckEnv 检查必要的环境变量是否设置
+func CheckEnv() {
+	if os.Getenv("BOT_TOKEN") == "" {
+		panic("BOT_TOKEN is not set")
+	}
+	if os.Getenv("WEBHOOK") == "" {
+		panic("WEBHOOK is not set")
+	}
+	if os.Getenv("PORT") == "" {
+		panic("PORT is not set")
+	}
+	// 该bot只服务于一个群组，因此这里需要在环境变量中配置当前服务的群组ID
+	if os.Getenv("CURRENT_CHAT_ID") == "" {
+		panic("CURRENT_CHAT_ID is not set")
+	}
 }

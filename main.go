@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -27,10 +28,12 @@ var chatIDWhiteList = []int64{ // 白名单
 	-1001924194112, // 正式群
 	-1001832030593, // 测试群4
 	-1001611670994, // 测试群2
+	-1001661504220, // 测试群5
+	5563126596,     // 管理员Jeffro
 }
-var CurrentlyChatID int64 = chatIDWhiteList[0]
 
 func main() {
+	utils.CheckEnv()
 	token := func() string {
 		if os.Getenv("BOT_TOKEN") == "" {
 			panic("BOT_TOKEN is not set")
@@ -72,6 +75,7 @@ func startGin(webhookSuffix string, port string, debug bool) {
 		})
 	})
 	router.POST("/testResult", testResultHandler)
+	router.POST("/sendNewTwitter", sendNewTwitterHandler)
 
 	err := router.Run(":" + port)
 	if err != nil {
@@ -113,7 +117,15 @@ func webhookHandler(c *gin.Context) {
 		if update.Message.IsCommand() {
 			handler.CommandHandler(bot, update)
 		} else if update.Message.Text != "" {
-			// handler.RepeatTextHandler(bot, update)
+			debug := os.Getenv("DEBUG") == "true"
+			if debug && update.Message.Text == "ping" {
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "pong")
+				msg.ReplyToMessageID = update.Message.MessageID
+				_, err := bot.Send(msg)
+				if err != nil {
+					zap.S().Error(err)
+				}
+			}
 		}
 	} else if update.ChatMember != nil {
 		if conditions.NewMemberJoined(update) { // 如果检测到有新成员进群
@@ -170,17 +182,93 @@ func testResultHandler(c *gin.Context) {
 		return
 	}
 
-	// 如果不在白名单内，直接返回
-	if !utils.InArrayInt64(CurrentlyChatID, chatIDWhiteList) {
+	CurrentChatID := os.Getenv("CURRENT_CHAT_ID")
+	// 把CurrentChatID转换成int64
+	CurrentChatIDInt64, err := strconv.ParseInt(CurrentChatID, 10, 64)
+	if err != nil {
+		log.Println(err)
 		return
 	}
 	if !req.Pass {
 		// 把用户移出群组
 		until := time.Now().Add(time.Minute * 10).Unix()
-		actions.BanUser(bot, CurrentlyChatID, req.UserID, until)
+		actions.BanUser(bot, CurrentChatIDInt64, req.UserID, until)
 	} else {
 		// 把用户解除禁言
-		actions.UnrestrictUser(bot, CurrentlyChatID, req.UserID)
+		actions.UnrestrictUser(bot, CurrentChatIDInt64, req.UserID)
 	}
 	return
+}
+
+func sendNewTwitterHandler(c *gin.Context) {
+
+	type PostData struct {
+		Token      string `json:"token"`
+		Text       string `json:"text"`
+		TwitterURL string `json:"twitter_url"`
+		Pin        bool   `json:"pin"` // 是否置顶
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(c.Request.Body)
+
+	bytes, err := io.ReadAll(c.Request.Body)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	var req PostData
+	err = json.Unmarshal(bytes, &req)
+	fmt.Println(req)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusOK, gin.H{
+			"message": err,
+		})
+		return
+	}
+
+	if req.Token != os.Getenv("BOT_TOKEN") {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "token error",
+		})
+		return
+	} else {
+		CurrentChatID := os.Getenv("CURRENT_CHAT_ID")
+		// 把CurrentChatID转换成int64
+		CurrentChatIDInt64, err := strconv.ParseInt(CurrentChatID, 10, 64)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		if req.Pin {
+			msg := tgbotapi.NewMessage(CurrentChatIDInt64, req.Text+"\n"+req.TwitterURL)
+			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonURL("查看原文",
+						req.TwitterURL),
+				),
+			)
+			msg.DisableWebPagePreview = false
+			resp, err := bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			actions.PinMessage(bot, CurrentChatIDInt64, resp.MessageID, true)
+		} else {
+			msg := tgbotapi.NewMessage(CurrentChatIDInt64, fmt.Sprintf("%s\n%s", req.Text, req.TwitterURL))
+			_, err := bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+	}
 }

@@ -36,9 +36,7 @@ func UnrestrictUser(bot *tgbotapi.BotAPI, chatId int64, userId int64) {
 			CanSendPolls:          true,
 			CanSendOtherMessages:  true,
 			CanAddWebPagePreviews: true,
-			CanChangeInfo:         false,
 			CanInviteUsers:        true,
-			CanPinMessages:        false,
 		},
 	})
 	if err != nil {

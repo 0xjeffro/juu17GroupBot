@@ -14,3 +14,10 @@ func BanUser(bot *tgbotapi.BotAPI, chatId int64, userId int64, untilDate int64) 
 		return
 	}
 }
+
+// BanUsers 批量封禁用户
+func BanUsers(bot *tgbotapi.BotAPI, chatId int64, userIds []int64, untilDate int64) {
+	for _, userId := range userIds {
+		BanUser(bot, chatId, userId, untilDate)
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"juu17GroupBot/actions"
+	"juu17GroupBot/cache"
 	"juu17GroupBot/conditions"
 	"juu17GroupBot/handler"
 	"juu17GroupBot/utils"
@@ -91,6 +92,19 @@ func webhookHandler(c *gin.Context) {
 		}
 	}(c.Request.Body)
 
+	// defer 踢掉所有过期用户
+	defer func() {
+		// 获得所有过期用户的ID
+		userIds := cache.PopAllExpiredMemberID()
+		// 把这些用户踢掉
+		until := time.Now().Add(time.Minute * 1).Unix()
+		CurrentChatID := os.Getenv("CURRENT_CHAT_ID")
+		// 把CurrentChatID转换成int64
+		CurrentChatIDInt64, _ := strconv.ParseInt(CurrentChatID, 10, 64)
+
+		actions.BanUsers(bot, CurrentChatIDInt64, userIds, until)
+	}()
+
 	bytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		log.Println(err)
@@ -129,6 +143,8 @@ func webhookHandler(c *gin.Context) {
 		}
 	} else if update.ChatMember != nil {
 		if conditions.NewMemberJoined(update) { // 如果检测到有新成员进群
+			// 常量，答题限时（分钟）
+			const quizTimeLimit = 20
 			// 如果不在白名单内，直接返回
 			if !utils.InArrayInt64(update.ChatMember.Chat.ID, chatIDWhiteList) {
 				zap.S().Infow("Not in white list.", "chat_id", update.ChatMember.Chat.ID)
@@ -136,19 +152,43 @@ func webhookHandler(c *gin.Context) {
 			}
 			// 把新成员禁言
 			actions.RestrictUser(bot, update.ChatMember.Chat.ID, update.ChatMember.NewChatMember.User.ID)
+
 			// 回复入群成员消息，完成入群验证
 			msg := tgbotapi.NewMessage(update.ChatMember.Chat.ID, "")
 
-			msg.Text = fmt.Sprintf("👋🏻 嗨, [%s %s](https://t.me/%s)! 请在30分钟内完成 👉🏻[入群测验](https://t.me/juu17_bot/Juu17Quiz?chatID=%s)。",
+			msg.Text = fmt.Sprintf("👋🏻 嗨, [%s %s](https://t.me/%s)! 请在%s分钟内完成 👉🏻[入群测验](https://t.me/juu17_bot/Juu17Quiz?chatID=%s)。",
 				update.ChatMember.NewChatMember.User.FirstName, update.ChatMember.NewChatMember.User.LastName,
-				update.ChatMember.NewChatMember.User.UserName, fmt.Sprintf("%d", update.ChatMember.Chat.ID))
+				update.ChatMember.NewChatMember.User.UserName, fmt.Sprintf("%d", quizTimeLimit),
+				fmt.Sprintf("%d", update.ChatMember.Chat.ID))
 			msg.ParseMode = "Markdown"
 
 			msg.DisableWebPagePreview = true
 
-			_, err = bot.Send(msg)
+			req, err := bot.Send(msg)
 			if err != nil {
 				zap.S().Error(err)
+			}
+
+			if _, ok := cache.GetMember(update.ChatMember.NewChatMember.User.ID); !ok {
+				// 如果缓存中没有该用户的信息，就把该用户的信息存入缓存
+				cache.AddMember(
+					update.ChatMember.NewChatMember.User.ID,
+					req.MessageID,
+					time.Now().Add(time.Minute*quizTimeLimit).Unix())
+			} else {
+				// 如果缓存中有该用户的信息，说明该用户已经进入过群组，但是没有完成入群验证
+				// 这时候需要把该用户的信息更新
+
+				// 获得用户上一次进群欢迎消息的msgID
+				member, _ := cache.GetMember(update.ChatMember.NewChatMember.User.ID)
+				msgID := member.MessageId
+				// 删除上一次的欢迎消息
+				actions.DeleteMessage(bot, update.ChatMember.Chat.ID, msgID)
+				// 更新缓存中的用户信息
+				cache.UpdateMember(
+					update.ChatMember.NewChatMember.User.ID,
+					req.MessageID,
+					time.Now().Add(time.Minute*quizTimeLimit).Unix())
 			}
 		}
 	}
@@ -191,7 +231,7 @@ func testResultHandler(c *gin.Context) {
 	}
 	if !req.Pass {
 		// 把用户移出群组
-		until := time.Now().Add(time.Minute * 10).Unix()
+		until := time.Now().Add(time.Minute * 15).Unix()
 		actions.BanUser(bot, CurrentChatIDInt64, req.UserID, until)
 	} else {
 		// 把用户解除禁言

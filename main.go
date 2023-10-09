@@ -236,6 +236,7 @@ func testResultHandler(c *gin.Context) {
 	} else {
 		// 把用户解除禁言
 		actions.UnrestrictUser(bot, CurrentChatIDInt64, req.UserID)
+		cache.DeleteMember(req.UserID)
 	}
 	return
 }

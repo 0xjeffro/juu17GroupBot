@@ -150,8 +150,6 @@ func webhookHandler(c *gin.Context) {
 				zap.S().Infow("Not in white list.", "chat_id", update.ChatMember.Chat.ID)
 				return
 			}
-			// 把新成员禁言
-			actions.RestrictUser(bot, update.ChatMember.Chat.ID, update.ChatMember.NewChatMember.User.ID)
 
 			// 回复入群成员消息，完成入群验证
 			msg := tgbotapi.NewMessage(update.ChatMember.Chat.ID, "")
@@ -168,6 +166,9 @@ func webhookHandler(c *gin.Context) {
 			if err != nil {
 				zap.S().Error(err)
 			}
+
+			// 把新成员禁言
+			actions.RestrictUser(bot, update.ChatMember.Chat.ID, update.ChatMember.NewChatMember.User.ID)
 
 			if _, ok := cache.GetMember(update.ChatMember.NewChatMember.User.ID); !ok {
 				// 如果缓存中没有该用户的信息，就把该用户的信息存入缓存

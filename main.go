@@ -232,7 +232,7 @@ func testResultHandler(c *gin.Context) {
 	}
 	if !req.Pass {
 		// 把用户移出群组
-		until := time.Now().Add(time.Minute * 15).Unix()
+		until := time.Now().Add(time.Minute * 30).Unix()
 		actions.BanUser(bot, CurrentChatIDInt64, req.UserID, until)
 	} else {
 		// 把用户解除禁言

@@ -11,6 +11,8 @@ import (
 	"juu17GroupBot/cache"
 	"juu17GroupBot/conditions"
 	"juu17GroupBot/handler"
+	"juu17GroupBot/orm"
+	"juu17GroupBot/save"
 	"juu17GroupBot/utils"
 	"log"
 	"net/http"
@@ -22,9 +24,10 @@ import (
 
 var bot *tgbotapi.BotAPI
 
+const PROJ_NAME = "juu17GroupBot"
+
 // 该机器人只服务于以下群组
 // CurrentlyChatID 为当前服务的群组ID， 用于进群验证时的解封，移出等操作
-// CurrentlyChatID 默认为 chatIDWhiteList[0]，所以在测试时，只需要把测试群的ID放在 chatIDWhiteList[0] 即可
 var chatIDWhiteList = []int64{ // 白名单
 	-1001924194112, // 正式群
 	-1001832030593, // 测试群4
@@ -56,6 +59,10 @@ func main() {
 	}()
 	debug := os.Getenv("DEBUG") == "true"
 	utils.InitLogger()
+	err := orm.Init()
+	if err != nil {
+		panic(err)
+	}
 
 	webhookSuffix := utils.MD5(token)
 	bot = utils.InitBot(token, webhook+"/"+webhookSuffix, debug)
@@ -127,10 +134,15 @@ func webhookHandler(c *gin.Context) {
 			"chat_id", update.Message.Chat.ID,
 			"message_id", update.Message.MessageID,
 			"from", update.Message.From,
-			"text", update.Message.Text)
+			"first_name", update.Message.From.FirstName,
+			"last_name", update.Message.From.LastName,
+			"text", update.Message.Text,
+			"date", update.Message.Date,
+		)
 		if update.Message.IsCommand() {
 			handler.CommandHandler(bot, update)
 		} else if update.Message.Text != "" {
+			save.SaveMsgToDB(update)
 			debug := os.Getenv("DEBUG") == "true"
 			if debug && update.Message.Text == "ping" {
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "pong")

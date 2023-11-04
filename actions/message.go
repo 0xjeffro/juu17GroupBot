@@ -13,6 +13,14 @@ func DeleteMessage(bot *tgbotapi.BotAPI, chatId int64, messageId int) {
 	}
 }
 
+func SendTextMessage(bot *tgbotapi.BotAPI, chatId int64, text string) {
+	msg := tgbotapi.NewMessage(chatId, text)
+	_, err := bot.Send(msg)
+	if err != nil {
+		return
+	}
+}
+
 // PinMessage 消息置顶
 func PinMessage(bot *tgbotapi.BotAPI, chatId int64, messageId int, notification bool) {
 	_, err := bot.Request(tgbotapi.PinChatMessageConfig{

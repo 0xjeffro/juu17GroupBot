@@ -4,7 +4,10 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"go.uber.org/zap"
+	"juu17GroupBot/actions"
 	"log"
+	"os"
+	"strconv"
 )
 
 func CommandHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
@@ -29,6 +32,34 @@ func CommandHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 		if err != nil {
 			log.Println(err)
 		}
+	case "msg":
+		// 获取消息内容
+		msgText := update.Message.CommandArguments()
+		// 获取消息发送者的ID
+		msgFrom := update.Message.From.ID
+		if msgFrom == 5563126596 {
+			currentChatId := os.Getenv("CURRENT_CHAT_ID")
+			currentChatIdInt64, _ := strconv.ParseInt(currentChatId, 10, 64)
+			msg = tgbotapi.NewMessage(currentChatIdInt64, msgText)
+			_, err := bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	case "pin":
+		msgText := update.Message.CommandArguments()
+		msgFrom := update.Message.From.ID
+		if msgFrom == 5563126596 {
+			currentChatId := os.Getenv("CURRENT_CHAT_ID")
+			currentChatIdInt64, _ := strconv.ParseInt(currentChatId, 10, 64)
+			msg = tgbotapi.NewMessage(currentChatIdInt64, msgText)
+			req, err := bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+			}
+			actions.PinMessage(bot, currentChatIdInt64, req.MessageID, true)
+		}
+
 		//case "ban":
 		//	if update.Message.ReplyToMessage != nil {
 		//		actions.BanUser(bot, update.Message.Chat.ID, update.Message.ReplyToMessage.From.ID, 0)

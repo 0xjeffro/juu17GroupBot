@@ -47,7 +47,7 @@ func InlineQueryHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 			line := tgbotapi.NewInlineQueryResultArticle(
 				string(rune(result.MessageID)),
 				utils.Int2Date(result.Date)+"  @"+result.UserName,
-				"🔍搜索结果：\n"+"https://t.me/djdjsnsnssj/"+strconv.Itoa(result.MessageID),
+				"🔍搜索结果：\n"+"https://t.me/juu17_fan/"+strconv.Itoa(result.MessageID),
 			)
 			line.Description = result.Text
 			line.ThumbURL = "https://cdn-icons-png.flaticon.com/128/8377/8377294.png" //"https://cdn-icons-png.flaticon.com/128/8455/8455397.png"

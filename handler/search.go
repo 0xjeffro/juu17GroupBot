@@ -6,6 +6,7 @@ import (
 	"juu17GroupBot/orm"
 	"juu17GroupBot/utils"
 	"strconv"
+	"strings"
 )
 
 func InlineQueryHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
@@ -27,8 +28,15 @@ func InlineQueryHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 		var results []Result
 
 		if inlineQuery.Query != "" {
+			// 以空格分割，获取最后一个字符串
+			lastWord := strings.Split(inlineQuery.Query, " ")[len(strings.Split(inlineQuery.Query, " "))-1]
+			// 如果最后一个字符串是数字
+			offset := 0
+			if _, err := strconv.Atoi(lastWord); err == nil {
+				offset, _ = strconv.Atoi(lastWord)
+			}
 			db.Select("message_id, user_id, user_name, user_first_name, user_last_name, text, date").
-				Where("text LIKE ?", "%"+inlineQuery.Query+"%").Order("date desc").Limit(100).Find(&orm.GroupMessage{}).Scan(&results)
+				Where("text LIKE ?", "%"+inlineQuery.Query+"%").Order("date desc").Offset(offset + 1).Limit(50).Find(&orm.GroupMessage{}).Scan(&results)
 		}
 
 		articleResults := make([]interface{}, 0)

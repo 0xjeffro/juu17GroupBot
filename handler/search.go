@@ -36,7 +36,7 @@ func InlineQueryHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 				offset, _ = strconv.Atoi(lastWord)
 			}
 			db.Select("message_id, user_id, user_name, user_first_name, user_last_name, text, date").
-				Where("text LIKE ?", "%"+inlineQuery.Query+"%").Order("date desc").Offset(offset + 1).Limit(50).Find(&orm.GroupMessage{}).Scan(&results)
+				Where("text LIKE ?", "%"+inlineQuery.Query+"%").Order("date desc").Offset(offset * 50).Limit(50).Find(&orm.GroupMessage{}).Scan(&results)
 		}
 
 		articleResults := make([]interface{}, 0)

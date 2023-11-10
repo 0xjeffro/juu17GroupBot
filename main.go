@@ -204,6 +204,8 @@ func webhookHandler(c *gin.Context) {
 					time.Now().Add(time.Minute*quizTimeLimit).Unix())
 			}
 		}
+	} else if update.InlineQuery != nil {
+		handler.InlineQueryHandler(bot, update)
 	}
 }
 

@@ -99,7 +99,7 @@ func webhookHandler(c *gin.Context) {
 		}
 	}(c.Request.Body)
 
-	// defer 踢掉所有过期用户
+	// defer 踢掉所有过期未完成答题的用户
 	defer func() {
 		// 获得所有过期用户的ID
 		userIds := cache.PopAllExpiredMemberID()
@@ -248,10 +248,19 @@ func testResultHandler(c *gin.Context) {
 		// 把用户移出群组
 		until := time.Now().Add(time.Hour * 6).Unix()
 		actions.BanUser(bot, CurrentChatIDInt64, req.UserID, until)
+		// 删除用户的欢迎消息
+		member, _ := cache.GetMember(req.UserID)
+		msgID := member.MessageId
+		actions.DeleteMessage(bot, CurrentChatIDInt64, msgID)
 	} else {
 		// 把用户解除禁言
 		actions.UnrestrictUser(bot, CurrentChatIDInt64, req.UserID)
 		cache.DeleteMember(req.UserID)
+
+		// 删除用户的欢迎消息
+		member, _ := cache.GetMember(req.UserID)
+		msgID := member.MessageId
+		actions.DeleteMessage(bot, CurrentChatIDInt64, msgID)
 	}
 	return
 }

@@ -255,12 +255,14 @@ func testResultHandler(c *gin.Context) {
 	} else {
 		// 把用户解除禁言
 		actions.UnrestrictUser(bot, CurrentChatIDInt64, req.UserID)
-		cache.DeleteMember(req.UserID)
 
 		// 删除用户的欢迎消息
 		member, _ := cache.GetMember(req.UserID)
 		msgID := member.MessageId
 		actions.DeleteMessage(bot, CurrentChatIDInt64, msgID)
+
+		// 把用户从缓存中删除
+		cache.DeleteMember(req.UserID)
 	}
 	return
 }

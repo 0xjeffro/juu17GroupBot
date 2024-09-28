@@ -34,6 +34,7 @@ var chatIDWhiteList = []int64{ // 白名单
 	-1001611670994, // 测试群2
 	-1001661504220, // 测试群5
 	5563126596,     // 管理员Jeffro
+	-1002082952153, // 枪宝库
 }
 
 func main() {
@@ -156,6 +157,9 @@ func webhookHandler(c *gin.Context) {
 		}
 	} else if update.ChatMember != nil {
 		if conditions.NewMemberJoined(update) { // 如果检测到有新成员进群
+			if update.ChatMember.Chat.ID != -1001924194112 { // 如果不是正式群，直接返回
+				return
+			}
 			// 常量，答题限时（分钟）
 			const quizTimeLimit = 20
 			// 如果不在白名单内，直接返回

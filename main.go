@@ -106,6 +106,7 @@ func webhookHandler(c *gin.Context) {
 		// 把这些用户踢掉
 		until := time.Now().Add(time.Minute * 1).Unix()
 		CurrentChatID := os.Getenv("CURRENT_CHAT_ID")
+		CurrentChatID = strings.Split(CurrentChatID, "|")[0]
 		// 把CurrentChatID转换成int64
 		CurrentChatIDInt64, _ := strconv.ParseInt(CurrentChatID, 10, 64)
 
@@ -238,6 +239,7 @@ func testResultHandler(c *gin.Context) {
 	}
 
 	CurrentChatID := os.Getenv("CURRENT_CHAT_ID")
+	CurrentChatID = strings.Split(CurrentChatID, "|")[0]
 	// 把CurrentChatID转换成int64
 	CurrentChatIDInt64, err := strconv.ParseInt(CurrentChatID, 10, 64)
 	if err != nil {
@@ -306,35 +308,38 @@ func sendNewTwitterHandler(c *gin.Context) {
 		})
 		return
 	} else {
-		CurrentChatID := os.Getenv("CURRENT_CHAT_ID")
-		// 把CurrentChatID转换成int64
-		CurrentChatIDInt64, err := strconv.ParseInt(CurrentChatID, 10, 64)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		if req.Pin {
-			msg := tgbotapi.NewMessage(CurrentChatIDInt64, req.Text+"\n"+req.TwitterURL)
-			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("查看原文",
-						req.TwitterURL),
-				),
-			)
-			msg.DisableWebPagePreview = false
-			resp, err := bot.Send(msg)
+		CurrentChatIDStr := os.Getenv("CURRENT_CHAT_ID")
+		// 用｜分割字符串，然后遍历
+		CurrentChatIDs := strings.Split(CurrentChatIDStr, "|")
+		for _, CurrentChatID := range CurrentChatIDs {
+			// 把CurrentChatID转换成int64
+			CurrentChatIDInt64, err := strconv.ParseInt(CurrentChatID, 10, 64)
 			if err != nil {
 				log.Println(err)
 				return
 			}
-			actions.PinMessage(bot, CurrentChatIDInt64, resp.MessageID, true)
-		} else {
-			msg := tgbotapi.NewMessage(CurrentChatIDInt64, fmt.Sprintf("%s\n%s", req.Text, req.TwitterURL))
-			_, err := bot.Send(msg)
-			if err != nil {
-				log.Println(err)
-				return
+			if req.Pin {
+				msg := tgbotapi.NewMessage(CurrentChatIDInt64, req.Text+"\n"+req.TwitterURL)
+				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonURL("查看原文",
+							req.TwitterURL),
+					),
+				)
+				msg.DisableWebPagePreview = false
+				resp, err := bot.Send(msg)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				actions.PinMessage(bot, CurrentChatIDInt64, resp.MessageID, true)
+			} else {
+				msg := tgbotapi.NewMessage(CurrentChatIDInt64, fmt.Sprintf("%s\n%s", req.Text, req.TwitterURL))
+				_, err := bot.Send(msg)
+				if err != nil {
+					log.Println(err)
+					return
+				}
 			}
 		}
 	}

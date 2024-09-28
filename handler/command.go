@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func CommandHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
@@ -39,6 +40,7 @@ func CommandHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 		msgFrom := update.Message.From.ID
 		if msgFrom == 5563126596 {
 			currentChatId := os.Getenv("CURRENT_CHAT_ID")
+			currentChatId = strings.Split(currentChatId, "|")[0]
 			currentChatIdInt64, _ := strconv.ParseInt(currentChatId, 10, 64)
 			msg = tgbotapi.NewMessage(currentChatIdInt64, msgText)
 			_, err := bot.Send(msg)
@@ -51,6 +53,7 @@ func CommandHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 		msgFrom := update.Message.From.ID
 		if msgFrom == 5563126596 {
 			currentChatId := os.Getenv("CURRENT_CHAT_ID")
+			currentChatId = strings.Split(currentChatId, "|")[0]
 			currentChatIdInt64, _ := strconv.ParseInt(currentChatId, 10, 64)
 			msg = tgbotapi.NewMessage(currentChatIdInt64, msgText)
 			req, err := bot.Send(msg)
